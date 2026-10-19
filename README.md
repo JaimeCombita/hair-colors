@@ -69,7 +69,7 @@ No se usa JPA ni un ORM pesado: JPA es de Java y aquí el stack es TypeScript. S
 ### Modelo
 `locations` · `services` · `staff` · `staff_services` · `working_hours` · `time_off` · `customers` · `appointments`
 
-`appointments`: `staff_id`, `service_id`, `customer_id`, `during tstzrange`, `status`, `payment_status`, `token`.
+`appointments`: `staff_id`, `service_id`, `customer_id`, `during tstzrange`, `status`, `payment_status`. El enlace de gestión usa un token HMAC firmado (no se guarda en BD).
 
 ```sql
 EXCLUDE USING gist (staff_id WITH =, during WITH &&) WHERE (status <> 'cancelled')
@@ -115,6 +115,8 @@ npm install
 cp .env.example .env.local   # completar variables
 npm run dev                  # http://localhost:3000
 npm run lint
+npm run typecheck
+npm test                     # unitarias + migraciones SQL (PGlite)
 npm run build
 ```
 

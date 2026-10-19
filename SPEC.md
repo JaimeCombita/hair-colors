@@ -188,7 +188,7 @@ Casos de uso. Orquestan reglas del dominio y repositorios. Una función por caso
 ### 5.3 Dominio (`modules/<d>/domain`)
 - `types.ts`: entidades y valores.
 - `schemas.ts`: Zod (única fuente de verdad para validación y tipos de entrada).
-- `rules.ts`: reglas **puras** (por ejemplo, cálculo de slots libres a partir de horarios, ausencias y citas).
+- `rules`: reglas **puras** sin efectos. En `scheduling`: `availability.ts` (cálculo de slots libres a partir de horarios, ausencias y citas) e `intervals.ts` (operaciones de intervalos).
 - `errors.ts`: errores tipados del dominio.
 - `repository.ts`: **interfaces** de persistencia.
 
@@ -233,7 +233,11 @@ Server Actions por feature: servicios, estilistas, horarios, ausencias, agenda y
 
 - PostgreSQL (Supabase), sin ORM. Migraciones SQL numeradas en `supabase/migrations/`.
 - Tipos de TypeScript generados con Supabase CLI. Los repositorios mapean esos tipos a entidades de dominio, y el dominio **no** depende de los tipos generados.
-- Tablas: `locations`, `services`, `staff`, `staff_services`, `working_hours`, `time_off`, `customers`, `appointments`.
+- Tablas: `locations`, `services`, `staff`, `staff_services`, `working_hours`, `time_off`, `customers`, `appointments`, `app_users` (rol del personal: `admin`, `receptionist`, `stylist`).
+- Migraciones: `20261018000001_core_schema.sql`, `…02_customers_appointments.sql`, `…03_roles_and_rls.sql`. Datos de ejemplo en `supabase/seed.sql`.
+- Estados de cita: `confirmed`, `completed`, `cancelled`, `no_show`. Las reservas nacen `confirmed` (sin pago en línea en el MVP) y `payment_status` queda en `not_required`.
+- El enlace de gestión de cita usa un token HMAC con expiración que contiene el id de la cita; no se almacena en BD.
+- `working_hours` guarda hora **local** del salón (`weekday` ISO 1-7) y permite varios bloques por día sin solaparse. `time_off` y `appointments.during` van en UTC.
 - Integridad crítica en BD:
   ```sql
   EXCLUDE USING gist (staff_id WITH =, during WITH &&) WHERE (status <> 'cancelled')
@@ -276,12 +280,21 @@ Server Actions por feature: servicios, estilistas, horarios, ausencias, agenda y
 
 | Nivel | Qué | Dónde | Herramienta |
 |---|---|---|---|
-| Unitarias | Reglas puras del dominio (disponibilidad, tokens, fechas), `*.logic.ts` | junto al archivo (`*.test.ts`) | Vitest |
-| Integración | Repositorios contra Postgres local | `modules/*/infrastructure` | Vitest + Supabase local |
+| Unitarias | Reglas puras del dominio (disponibilidad, fechas, teléfono), esquemas Zod, casos de uso con dependencias simuladas | junto al archivo (`*.test.ts`) | Vitest |
+| Base de datos | Migraciones, constraints y RLS contra un Postgres real en memoria | `tests/db/` | Vitest + PGlite (con `btree_gist`) |
+| Integración | Repositorios contra Supabase local | `modules/*/infrastructure` | Vitest + Supabase local |
 | Componentes | Primitivas y componentes con lógica | junto al componente | Vitest + Testing Library |
 | E2E | Flujo de reserva completo, panel admin | `tests/` | Playwright |
 
-Prioridad: cubrir primero `scheduling/domain/rules.ts` (cálculo de disponibilidad y conflictos).
+Prioridad: cubrir primero `scheduling/domain/availability.ts` (cálculo de disponibilidad) y los constraints de `appointments`. Comandos: `npm test`, `npm run lint`, `npm run typecheck`.
+
+### Reglas de disponibilidad (`scheduling`)
+- Un slot es válido si **cabe completo** dentro de un bloque de `working_hours` y no se solapa con citas activas ni ausencias.
+- Los inicios se generan cada `SLOT_STEP_MINUTES` (15) desde el inicio de cada bloque.
+- Anticipación mínima `MIN_LEAD_MINUTES` (60) y ventana máxima `MAX_ADVANCE_DAYS` (60). Constantes en `domain/constants.ts`.
+- Citas contiguas (fin == inicio) no se consideran solapadas.
+- La zona horaria del salón se aplica al convertir horas locales a UTC (`shared/lib/datetime.ts`); funciona también con zonas con DST.
+- La disponibilidad es informativa: la garantía final contra dobles reservas es la constraint `appointments_no_overlap`.
 
 ---
 
@@ -306,3 +319,27 @@ features/booking/components/booking-form        (presentación)
                  └─ infrastructure/appointment-repository.ts   (INSERT; la BD rechaza solapamientos)
                       └─ publica AppointmentCreated → notifications → email (Resend)
 ```
+
+---
+
+## 13. Diseño visual e identidad de marca
+
+Los colores de `src/styles/theme.css` son **provisionales** hasta definir la identidad del salón.
+
+### Proceso
+1. **Identidad:** logo, paleta (primario, secundario, neutros, estados), tipografías y tono de comunicación. Si el salón ya tiene marca, se parte de ella.
+2. **Referentes y moodboard:** 3 a 5 salones de referencia, estilo fotográfico y ambiente.
+3. **Wireframes y prototipo** (Figma) de: landing, flujo de reserva (móvil primero), gestión de cita y panel admin.
+4. **Tokens:** la paleta y la tipografía aprobadas se traducen a `theme.css`. Después, ningún componente usa valores de color fuera de los tokens.
+5. **Librería de componentes:** primitivas en `shared/ui` construidas sobre los tokens (botones, campos, selector de fecha y hora, tarjetas, diálogos).
+
+### Reglas
+- **Mobile-first:** la mayoría de las reservas se harán desde el celular. Se diseña primero para pantallas pequeñas.
+- **Accesibilidad:** contraste mínimo WCAG AA (4.5:1 en texto), foco visible, navegación por teclado, etiquetas en formularios y objetivos táctiles ≥ 44 px.
+- **Rendimiento:** imágenes con `next/image` en AVIF/WebP, fuentes con `next/font`, objetivo LCP < 2,5 s en 4G.
+- **Imágenes:** fotografía real del salón y del equipo. Las de banco solo como apoyo y con licencia comercial.
+- **Modo oscuro:** opcional; si se adopta, se define en `theme.css` con los mismos tokens.
+- **Consistencia:** espaciados, radios y sombras provienen de la escala de tokens, no de valores sueltos.
+
+### Entregables de diseño
+Guía de marca breve (paleta, tipografía, uso del logo), prototipo en Figma, tokens en `theme.css` y activos en `public/`.

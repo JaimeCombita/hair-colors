@@ -11,7 +11,7 @@
 - [ ] Instalar shadcn/ui configurando los alias hacia `src/shared/ui`
 - [ ] Configurar Prettier
 - [x] Configurar Vitest (pendiente Testing Library para componentes)
-- [ ] Configurar `server/env.ts` (validación con Zod)
+- [x] Configurar `server/env.ts` (validación con Zod)
 - [ ] Crear proyecto en Supabase y configurar Supabase CLI
 - [ ] Registrar dominio (.com / .co)
 
@@ -29,13 +29,15 @@
 - [x] Reglas de disponibilidad (horarios, ausencias, citas existentes, zona America/Bogota) con pruebas
 - [x] Esquemas Zod de consulta de disponibilidad y creación de cita
 - [x] Caso de uso `getAvailability` con puertos de repositorio y catálogo
-- [ ] Repositorio de scheduling con Supabase (`infrastructure/`)
-- [ ] Módulos `catalog` y `staff`: dominio, casos de uso y repositorios
-- [ ] Adaptador `ServiceCatalogReader` sobre el módulo catalog
+- [x] Repositorio de scheduling con Supabase (`infrastructure/`), verificado por forma de las peticiones (pendiente probar contra Supabase real)
+- [x] Módulos `catalog`, `staff` y `customers`: dominio, casos de uso y repositorios
+- [x] Adaptadores de `ServiceCatalogReader` y `CustomerDirectory` sobre los módulos catalog, staff y customers
+- [x] `server/env.ts` y cliente Supabase admin
+- [x] Bus de eventos en memoria y evento `appointment.created`
 - [ ] Endpoint de servicios
 - [ ] Endpoint de estilistas por servicio
 - [ ] Endpoint de disponibilidad
-- [ ] Caso de uso `createAppointment` (upsert de cliente, validación de slot, manejo del conflicto de la constraint)
+- [x] Caso de uso `createAppointment` (upsert de cliente, validación de slot, manejo del conflicto de la constraint)
 - [ ] Endpoint de creación de cita (Zod + Turnstile + manejo de conflicto)
 - [ ] Token firmado para consultar/reprogramar/cancelar
 - [ ] Rate limiting

@@ -1,4 +1,4 @@
-export { getAvailability, type GetAvailabilityDeps } from "./application/get-availability";
+export { schedulingService, schedulingEvents } from "./infrastructure/composition";
 export {
   availabilityQuerySchema,
   createAppointmentSchema,
@@ -6,8 +6,6 @@ export {
   type CreateAppointmentInput,
 } from "./domain/schemas";
 export { SchedulingErrorCode } from "./domain/errors";
-export type {
-  SchedulingRepository,
-  ServiceCatalogReader,
-} from "./domain/repository";
+export type { AppointmentCreatedEvent, SchedulingEvent } from "./domain/events";
+export type { CreatedAppointment } from "./application/create-appointment";
 export type { TimeInterval, WorkingBlock, BookableService, AppointmentStatus } from "./domain/types";

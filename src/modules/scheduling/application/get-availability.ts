@@ -1,13 +1,13 @@
 import { SALON_TIME_ZONE } from "@/shared/config/constants";
-import { localDayBounds, addDaysToLocalDate, toLocalDate } from "@/shared/lib/datetime";
 import type { DomainError } from "@/shared/lib/errors";
 import { err, ok, type Result } from "@/shared/lib/result";
-import { computeAvailableSlots } from "../domain/availability";
-import { MAX_ADVANCE_DAYS } from "../domain/constants";
 import { schedulingErrors } from "../domain/errors";
 import type { SchedulingRepository, ServiceCatalogReader } from "../domain/repository";
 import type { AvailabilityQuery } from "../domain/schemas";
 import type { TimeInterval } from "../domain/types";
+import { isWithinBookingWindow } from "./booking-window";
+import { findAvailableSlots } from "./find-available-slots";
+import { resolveBookableService } from "./resolve-bookable-service";
 
 export interface GetAvailabilityDeps {
   scheduling: SchedulingRepository;
@@ -27,33 +27,16 @@ export async function getAvailability(
     return err(schedulingErrors.dateOutOfRange());
   }
 
-  const service = await deps.catalog.getService(query.serviceId);
-  if (!service || !service.isActive) return err(schedulingErrors.serviceNotFound());
-
-  if (!(await deps.catalog.staffOffersService(query.staffId, query.serviceId))) {
-    return err(schedulingErrors.serviceNotOffered());
-  }
-
-  const day = localDayBounds(query.date, timeZone);
-  const [workingBlocks, timeOff, appointments] = await Promise.all([
-    deps.scheduling.getWorkingBlocks(query.staffId),
-    deps.scheduling.getTimeOff(query.staffId, day),
-    deps.scheduling.getActiveAppointments(query.staffId, day),
-  ]);
+  const service = await resolveBookableService(deps.catalog, query.serviceId, query.staffId);
+  if (!service.ok) return service;
 
   return ok(
-    computeAvailableSlots({
+    await findAvailableSlots(deps.scheduling, {
+      staffId: query.staffId,
+      service: service.value,
       date: query.date,
-      timeZone,
-      serviceDurationMinutes: service.durationMinutes,
-      workingBlocks,
-      busy: [...timeOff, ...appointments],
       now,
+      timeZone,
     }),
   );
-}
-
-function isWithinBookingWindow(date: string, now: Date, timeZone: string): boolean {
-  const today = toLocalDate(now, timeZone);
-  return date >= today && date <= addDaysToLocalDate(today, MAX_ADVANCE_DAYS);
 }

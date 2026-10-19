@@ -107,6 +107,13 @@ domain  ◄── application ◄── infrastructure
 
 Un módulo solo se importa desde fuera por su `index.ts`. Importar archivos internos está prohibido.
 
+### Composición (inyección de dependencias)
+Cada módulo ensambla sus casos de uso con sus repositorios en `infrastructure/composition.ts` (marcado con `server-only`), y su `index.ts` reexporta el servicio resultante (`catalogService`, `staffService`, `customersService`, `schedulingService`). Así `domain/` y `application/` nunca importan `server/` y los casos de uso se prueban con dependencias simuladas.
+
+Un módulo que necesita datos de otro define su propio **puerto** en `domain/repository.ts` y lo implementa con un adaptador en su `composition.ts`, que importa el otro módulo solo por su `index.ts`. Por ejemplo, `scheduling` define `ServiceCatalogReader` y `CustomerDirectory`.
+
+Como `index.ts` arrastra código de servidor, los componentes de cliente no pueden importar un módulo; solo lo hacen las Server Actions y los route handlers.
+
 Estas reglas se aplican con `no-restricted-imports` en [eslint.config.mjs](./eslint.config.mjs). ESLint bloquea: imports hacia capas superiores, `next`/`react` dentro de `modules/`, `server/` fuera de `infrastructure/`, imports profundos a módulos y features, y rutas relativas `../../`. La regla "un feature no importa a otro" se revisa en code review.
 
 ---

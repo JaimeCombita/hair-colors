@@ -1,0 +1,28 @@
+/* Tokens de diseño: única fuente de colores, tipografía y radios. */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-brand-50: #fdf2f8;
+  --color-brand-100: #fce7f3;
+  --color-brand-500: #db2777;
+  --color-brand-600: #be185d;
+  --color-brand-700: #9d174d;
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --radius-control: 0.5rem;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --muted: #6b7280;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --muted: #9ca3af;
+  }
+}
